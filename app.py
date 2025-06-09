@@ -151,103 +151,214 @@ def process_revenue_data(financial_data, ticker):
         st.error(f"Error processing revenue data: {str(e)}")
         return None
 
-# Function to create synthetic segment data for visualization
+def get_all_revenues(json_data):
+    all_revenues = []
+    for year, xbrl_json in json_data.items():
+        if (
+            "StatementsOfIncome" in xbrl_json
+            and "RevenueFromContractWithCustomerExcludingAssessedTax" in xbrl_json["StatementsOfIncome"]
+        ):
+            all_revenues.extend(
+                xbrl_json["StatementsOfIncome"]["RevenueFromContractWithCustomerExcludingAssessedTax"]
+            )
+
+    all_revenues = pd.json_normalize(all_revenues)
+    try:
+        all_revenues.drop_duplicates(inplace=True)
+    except Exception:
+        pass
+
+    all_revenues["value"] = all_revenues["value"].astype(int)
+
+    try:
+        all_revenues = all_revenues.explode("segment")
+        segment_split = all_revenues["segment"].apply(pd.Series)
+        segment_split = segment_split.rename(
+            columns={"dimension": "segment.dimension", "value": "segment.value"}
+        )
+        segment_split = segment_split.drop(0, axis=1)
+        all_revenues = all_revenues.combine_first(segment_split)
+        all_revenues = all_revenues.drop("segment", axis=1)
+        all_revenues = all_revenues.reset_index(drop=True)
+    except Exception:
+        pass
+    return all_revenues
+
+
+def get_revenue_product(all_revenues, company_name):
+    segment_labels = all_revenues["segment.value"].dropna().unique().tolist()
+    mask = all_revenues["segment.dimension"] == "srt:ProductOrServiceAxis"
+    revenue_product = all_revenues[mask]
+
+    try:
+        revenue_product = revenue_product.drop_duplicates(
+            subset=["period.endDate", "segment.value"]
+        )
+    except Exception:
+        pass
+
+    revenue_product_pivot = revenue_product.pivot(
+        index="period.endDate", columns="segment.value", values="value"
+    )
+    return revenue_product, revenue_product_pivot, segment_labels
+
+
+def get_revenue_region(all_revenues, company_name):
+    segment_labels = all_revenues["segment.value"].dropna().unique().tolist()
+    mask = all_revenues["segment.dimension"] == "srt:StatementGeographicalAxis"
+    revenue_region = all_revenues[mask]
+
+    try:
+        revenue_region = revenue_region.drop_duplicates(
+            subset=["period.endDate", "segment.value"]
+        )
+    except Exception:
+        pass
+
+    revenue_region_pivot = revenue_region.pivot(
+        index="period.endDate", columns="segment.value", values="value"
+    )
+    return revenue_region, revenue_region_pivot, segment_labels
+
+# Function to create segment data for visualization
 def create_segment_data(revenue_df, ticker):
     """Create synthetic segment data based on company type"""
     if revenue_df is None or len(revenue_df) == 0:
         return None, None
 
-    # Define segment patterns based on company type
-    tech_segments = ['Software & Services', 'Hardware', 'Cloud Services', 'Other']
-    retail_segments = ['Online Sales', 'Physical Stores', 'Subscription Services', 'Other']
-    finance_segments = ['Investment Banking', 'Consumer Banking', 'Trading', 'Other Services']
+    if ticker in ['AAPL', 'GOOGL']:
+        try:
+            # Load your pre-downloaded XBRL JSON file (rename as needed)
+            json_path = f"data/{ticker.lower()}_xbrl_data_final.json"
+            with open(json_path, "r") as f:
+                json_data = json.load(f)
 
-    # Categorize companies
-    tech_companies = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META', 'NVDA', 'NFLX', 'ADBE', 'CRM', 'ORCL']
-    retail_companies = ['WMT', 'TGT', 'HD', 'LOW', 'SBUX', 'MCD', 'NKE']
-    finance_companies = ['JPM', 'BAC', 'WFC', 'GS', 'MS', 'V', 'MA']
+            all_revenues = get_all_revenues(json_data)
+            revenue_product, revenue_pivot, _ = get_revenue_product(all_revenues, ticker)
 
-    if ticker in tech_companies:
-        segments = tech_segments
-        # Tech companies typically have software-heavy revenue
-        segment_ratios = [0.45, 0.25, 0.20, 0.10]
-    elif ticker in retail_companies:
-        segments = retail_segments
-        segment_ratios = [0.35, 0.40, 0.15, 0.10]
-    elif ticker in finance_companies:
-        segments = finance_segments
-        segment_ratios = [0.30, 0.35, 0.25, 0.10]
+            # Convert period.endDate to year for consistency with other plots
+            revenue_product['year'] = pd.to_datetime(revenue_product['period.endDate']).dt.year
+            segment_df = revenue_product.rename(columns={'segment.value': 'segment'})[['year', 'segment', 'value']]
+            segment_df = segment_df.rename(columns={'value': 'revenue'})
+            segment_pivot = segment_df.pivot(index='year', columns='segment', values='revenue')
+
+            return segment_df, segment_pivot
+        except Exception as e:
+            st.error(f"Error loading real segment data for {ticker}: {str(e)}")
+            return None, None
+        
     else:
-        segments = ['Core Business', 'Secondary Services', 'International', 'Other']
-        segment_ratios = [0.60, 0.20, 0.15, 0.05]
+        # Define segment patterns based on company type
+        tech_segments = ['Software & Services', 'Hardware', 'Cloud Services', 'Other']
+        retail_segments = ['Online Sales', 'Physical Stores', 'Subscription Services', 'Other']
+        finance_segments = ['Investment Banking', 'Consumer Banking', 'Trading', 'Other Services']
 
-    # Create segment data
-    segment_data = []
-    for _, row in revenue_df.iterrows():
-        year = row['year']
-        total_revenue = row['revenue']
+        # Categorize companies
+        tech_companies = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META', 'NVDA', 'NFLX', 'ADBE', 'CRM', 'ORCL']
+        retail_companies = ['WMT', 'TGT', 'HD', 'LOW', 'SBUX', 'MCD', 'NKE']
+        finance_companies = ['JPM', 'BAC', 'WFC', 'GS', 'MS', 'V', 'MA']
 
-        for i, segment in enumerate(segments):
-            segment_revenue = total_revenue * segment_ratios[i]
-            # Add some random variation
-            variation = np.random.normal(1, 0.1)
-            segment_revenue *= max(0.5, variation)  # Ensure positive values
+        if ticker in tech_companies:
+            segments = tech_segments
+            # Tech companies typically have software-heavy revenue
+            segment_ratios = [0.45, 0.25, 0.20, 0.10]
+        elif ticker in retail_companies:
+            segments = retail_segments
+            segment_ratios = [0.35, 0.40, 0.15, 0.10]
+        elif ticker in finance_companies:
+            segments = finance_segments
+            segment_ratios = [0.30, 0.35, 0.25, 0.10]
+        else:
+            segments = ['Core Business', 'Secondary Services', 'International', 'Other']
+            segment_ratios = [0.60, 0.20, 0.15, 0.05]
 
-            segment_data.append({
-                'year': year,
-                'segment': segment,
-                'revenue': segment_revenue
-            })
+        # Create segment data
+        segment_data = []
+        for _, row in revenue_df.iterrows():
+            year = row['year']
+            total_revenue = row['revenue']
 
-    segment_df = pd.DataFrame(segment_data)
+            for i, segment in enumerate(segments):
+                segment_revenue = total_revenue * segment_ratios[i]
+                # Add some random variation
+                variation = np.random.normal(1, 0.1)
+                segment_revenue *= max(0.5, variation)  # Ensure positive values
 
-    # Create pivot table for visualization
-    segment_pivot = segment_df.pivot(index='year', columns='segment', values='revenue')
+                segment_data.append({
+                    'year': year,
+                    'segment': segment,
+                    'revenue': segment_revenue
+                })
 
-    return segment_df, segment_pivot
+        segment_df = pd.DataFrame(segment_data)
+
+        # Create pivot table for visualization
+        segment_pivot = segment_df.pivot(index='year', columns='segment', values='revenue')
+
+        return segment_df, segment_pivot
 
 # Function to create regional data
 def create_regional_data(revenue_df, ticker):
     """Create synthetic regional data based on company"""
     if revenue_df is None or len(revenue_df) == 0:
         return None, None
+    
+    if ticker in ['AAPL', 'GOOGL']:
+        try:
+            json_path = f"data/{ticker.lower()}_xbrl_data_final.json"
+            with open(json_path, "r") as f:
+                json_data = json.load(f)
 
-    # Define regional patterns
-    regions = ['North America', 'Europe', 'Asia Pacific', 'Other']
+            all_revenues = get_all_revenues(json_data)
+            revenue_region, region_pivot, _ = get_revenue_region(all_revenues, ticker)
 
-    # Different regional distributions for different company types
-    us_heavy = ['WMT', 'TGT', 'HD', 'LOW', 'SBUX', 'MCD']  # US-focused companies
-    global_tech = ['AAPL', 'GOOGL', 'MSFT', 'META', 'NVDA']  # Global tech companies
+            revenue_region['year'] = pd.to_datetime(revenue_region['period.endDate']).dt.year
+            regional_df = revenue_region.rename(columns={'segment.value': 'region'})[['year', 'region', 'value']]
+            regional_df = regional_df.rename(columns={'value': 'revenue'})
+            regional_pivot = regional_df.pivot(index='year', columns='region', values='revenue')
 
-    if ticker in us_heavy:
-        regional_ratios = [0.70, 0.15, 0.10, 0.05]  # US-heavy
-    elif ticker in global_tech:
-        regional_ratios = [0.45, 0.25, 0.25, 0.05]  # More global
+            return regional_df, regional_pivot
+        except Exception as e:
+            st.error(f"Error loading real region data for {ticker}: {str(e)}")
+            return None, None
+
     else:
-        regional_ratios = [0.55, 0.20, 0.20, 0.05]  # Balanced
+        # Define regional patterns
+        regions = ['North America', 'Europe', 'Asia Pacific', 'Other']
 
-    # Create regional data
-    regional_data = []
-    for _, row in revenue_df.iterrows():
-        year = row['year']
-        total_revenue = row['revenue']
+        # Different regional distributions for different company types
+        us_heavy = ['WMT', 'TGT', 'HD', 'LOW', 'SBUX', 'MCD']  # US-focused companies
+        global_tech = ['AAPL', 'GOOGL', 'MSFT', 'META', 'NVDA']  # Global tech companies
 
-        for i, region in enumerate(regions):
-            regional_revenue = total_revenue * regional_ratios[i]
-            # Add some random variation
-            variation = np.random.normal(1, 0.1)
-            regional_revenue *= max(0.5, variation)
+        if ticker in us_heavy:
+            regional_ratios = [0.70, 0.15, 0.10, 0.05]  # US-heavy
+        elif ticker in global_tech:
+            regional_ratios = [0.45, 0.25, 0.25, 0.05]  # More global
+        else:
+            regional_ratios = [0.55, 0.20, 0.20, 0.05]  # Balanced
 
-            regional_data.append({
-                'year': year,
-                'region': region,
-                'revenue': regional_revenue
-            })
+        # Create regional data
+        regional_data = []
+        for _, row in revenue_df.iterrows():
+            year = row['year']
+            total_revenue = row['revenue']
 
-    regional_df = pd.DataFrame(regional_data)
-    regional_pivot = regional_df.pivot(index='year', columns='region', values='revenue')
+            for i, region in enumerate(regions):
+                regional_revenue = total_revenue * regional_ratios[i]
+                # Add some random variation
+                variation = np.random.normal(1, 0.1)
+                regional_revenue *= max(0.5, variation)
 
-    return regional_df, regional_pivot
+                regional_data.append({
+                    'year': year,
+                    'region': region,
+                    'revenue': regional_revenue
+                })
+
+        regional_df = pd.DataFrame(regional_data)
+        regional_pivot = regional_df.pivot(index='year', columns='region', values='revenue')
+
+        return regional_df, regional_pivot
 
 
 # Function to plot revenue by product segments
@@ -433,9 +544,19 @@ def analyze_segment_data(segment_df, ticker):
         total_revenue = latest_data['revenue'].sum()
         segment_analysis = f"**Segment Analysis for {ticker} ({latest_year}):**\n\n"
 
+        # for _, row in latest_data.iterrows():
+        #     percentage = (row['revenue'] / total_revenue) * 100
+        #     segment_analysis += f"• **{row['segment']}:** ${row['revenue']/1e9:.2f}B ({percentage:.1f}%)\n"
+            
         for _, row in latest_data.iterrows():
+            label = row['segment']  # preserve full label
+            revenue_b = row['revenue'] / 1e9
             percentage = (row['revenue'] / total_revenue) * 100
-            segment_analysis += f"• **{row['segment']}:** ${row['revenue']/1e9:.2f}B ({percentage:.1f}%)\n"
+
+            # Escape underscores and asterisks (which can break Markdown formatting)
+            label_safe = label.replace("_", "\\_").replace("*", "\\*")
+
+            segment_analysis += f"- **{label_safe}**: ${revenue_b:.2f}B ({percentage:.1f}%)\n"
 
         # Find dominant segment
         dominant_segment = latest_data.loc[latest_data['revenue'].idxmax(), 'segment']
@@ -537,7 +658,7 @@ def calculate_technical_indicators(df):
         return df
 
 def simple_prediction_model(df, days=30):
-    """Enhanced prediction model using technical analysis and trend modeling"""
+    """Prediction model using technical analysis and trend modeling"""
     try:
         st.info("Analyzing technical indicators and market trends...")
 
@@ -881,11 +1002,11 @@ def plot_interactive_prediction(historical_data, predictions, ticker):
 
 
 # Streamlit app Initialisation
-st.title("Enhanced Financial Analysis App")
-st.markdown("### Analyze financial data for major public companies")
+st.title("Financial Analysis App")
+st.markdown("### Analyze financial data for public companies")
 
-# Sidebar with supported companies
-st.sidebar.title("Supported Companies")
+# Sidebar with example companies
+st.sidebar.title("Popular Companies")
 st.sidebar.markdown("Select from popular tickers or enter your own:")
 
 # Create columns for better layout
@@ -1186,7 +1307,7 @@ def main():
     st.markdown("---")
     st.markdown(
         '<div style="text-align: center; color: #666; font-size: 14px;">'
-        'Enhanced Financial Analysis App | '
+        'Financial Analysis App | '
         'Data powered by Yahoo Finance | '
         'Built with Streamlit'
         '</div>',
