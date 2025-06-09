@@ -3,7 +3,5 @@ pandas
 streamlit==1.34.0
 yfinance
 numpy
-scikit-learn
 plotly
 requests
-openai

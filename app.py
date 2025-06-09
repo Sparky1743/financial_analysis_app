@@ -11,17 +11,6 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 
-# Try to import additional libraries for prediction
-try:
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.linear_model import LinearRegression
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.metrics import mean_absolute_error, mean_squared_error
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
-    st.warning("⚠️ scikit-learn not available. Stock prediction feature will use simplified models.")
-
 try:
     import plotly.graph_objects as go
     import plotly.express as px
@@ -487,136 +476,185 @@ def get_market_sentiment_data():
 def calculate_technical_indicators(df):
     """Calculate technical indicators for prediction"""
     try:
+        df = df.copy()  # Work with a copy to avoid modifying original
+
+        # Ensure we have enough data
+        if len(df) < 60:
+            st.warning(f"⚠️ Limited data ({len(df)} days) - some indicators may be less reliable")
+
         # Simple Moving Averages
-        df['SMA_20'] = df['Close'].rolling(window=20).mean()
-        df['SMA_50'] = df['Close'].rolling(window=50).mean()
+        df['SMA_20'] = df['Close'].rolling(window=min(20, len(df)//3)).mean()
+        df['SMA_50'] = df['Close'].rolling(window=min(50, len(df)//2)).mean()
 
         # Exponential Moving Average
-        df['EMA_12'] = df['Close'].ewm(span=12).mean()
-        df['EMA_26'] = df['Close'].ewm(span=26).mean()
+        df['EMA_12'] = df['Close'].ewm(span=min(12, len(df)//4)).mean()
+        df['EMA_26'] = df['Close'].ewm(span=min(26, len(df)//3)).mean()
 
         # MACD
         df['MACD'] = df['EMA_12'] - df['EMA_26']
         df['MACD_Signal'] = df['MACD'].ewm(span=9).mean()
 
-        # RSI
+        # RSI (Relative Strength Index)
         delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
+        gain = (delta.where(delta > 0, 0)).rolling(window=min(14, len(df)//4)).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=min(14, len(df)//4)).mean()
+
+        # Handle division by zero
+        rs = gain / loss.replace(0, np.nan)
         df['RSI'] = 100 - (100 / (1 + rs))
+        df['RSI'] = df['RSI'].fillna(50)  # Fill NaN with neutral RSI
 
         # Bollinger Bands
-        df['BB_Middle'] = df['Close'].rolling(window=20).mean()
-        bb_std = df['Close'].rolling(window=20).std()
+        window = min(20, len(df)//3)
+        df['BB_Middle'] = df['Close'].rolling(window=window).mean()
+        bb_std = df['Close'].rolling(window=window).std()
         df['BB_Upper'] = df['BB_Middle'] + (bb_std * 2)
         df['BB_Lower'] = df['BB_Middle'] - (bb_std * 2)
 
-        # Volume indicators
-        df['Volume_SMA'] = df['Volume'].rolling(window=20).mean()
-        df['Volume_Ratio'] = df['Volume'] / df['Volume_SMA']
+        # Volume indicators (handle missing volume data)
+        if 'Volume' in df.columns and df['Volume'].sum() > 0:
+            df['Volume_SMA'] = df['Volume'].rolling(window=min(20, len(df)//3)).mean()
+            df['Volume_Ratio'] = df['Volume'] / df['Volume_SMA'].replace(0, 1)
+            df['Volume_Ratio'] = df['Volume_Ratio'].fillna(1)
+        else:
+            df['Volume_SMA'] = 1
+            df['Volume_Ratio'] = 1
 
         # Price momentum
         df['Price_Change'] = df['Close'].pct_change()
-        df['Volatility'] = df['Price_Change'].rolling(window=20).std()
+        df['Volatility'] = df['Price_Change'].rolling(window=min(20, len(df)//3)).std()
+        df['Volatility'] = df['Volatility'].fillna(df['Volatility'].mean())
+
+        # Additional indicators
+        df['Price_Position'] = (df['Close'] - df['Close'].rolling(window=min(20, len(df)//3)).min()) / \
+                              (df['Close'].rolling(window=min(20, len(df)//3)).max() -
+                               df['Close'].rolling(window=min(20, len(df)//3)).min())
+        df['Price_Position'] = df['Price_Position'].fillna(0.5)
 
         return df
     except Exception as e:
-        st.error(f"Error calculating technical indicators: {str(e)}")
+        st.error(f"❌ Error calculating technical indicators: {str(e)}")
         return df
 
 def simple_prediction_model(df, days=30):
-    """Simple prediction model using moving averages and trends"""
+    """Enhanced prediction model using technical analysis and trend modeling"""
     try:
-        # Get recent data
-        recent_data = df.tail(60).copy()
+        st.info("📊 Analyzing technical indicators and market trends...")
 
-        # Calculate trend
-        prices = recent_data['Close'].values
+        # Get extended recent data for better analysis
+        recent_data = df.tail(120).copy() if len(df) >= 120 else df.copy()
+
+        # Calculate technical indicators
+        recent_data = calculate_technical_indicators(recent_data)
+
+        # Get the most recent complete data (remove NaN)
+        clean_data = recent_data.dropna().tail(60) if len(recent_data.dropna()) >= 60 else recent_data.dropna()
+
+        if len(clean_data) < 10:
+            st.warning("⚠️ Limited data available, using basic trend analysis")
+            prices = df['Close'].tail(30).values
+            last_price = prices[-1]
+            trend = (prices[-1] - prices[0]) / len(prices)
+            return np.array([last_price + trend * i for i in range(1, days + 1)])
+
+        # Extract key metrics
+        prices = clean_data['Close'].values
+        volumes = clean_data['Volume'].values if 'Volume' in clean_data.columns else np.ones(len(prices))
+
+        # Calculate multiple trend indicators
         x = np.arange(len(prices))
 
-        # Simple linear regression
-        coeffs = np.polyfit(x, prices, 1)
-        trend_slope = coeffs[0]
+        # 1. Linear trend
+        linear_coeffs = np.polyfit(x, prices, 1)
+        linear_trend = linear_coeffs[0]
 
-        # Calculate volatility
-        volatility = recent_data['Close'].pct_change().std()
+        # 2. Exponential weighted trend (more weight to recent data)
+        weights = np.exp(np.linspace(-1, 0, len(prices)))
+        weighted_trend = np.polyfit(x, prices, 1, w=weights)[0]
+
+        # 3. Moving average trend
+        short_ma = np.mean(prices[-10:]) if len(prices) >= 10 else np.mean(prices)
+        long_ma = np.mean(prices[-30:]) if len(prices) >= 30 else np.mean(prices)
+        ma_trend = (short_ma - long_ma) / 10 if long_ma != 0 else 0
+
+        # Combine trends with weights
+        combined_trend = (linear_trend * 0.3 + weighted_trend * 0.5 + ma_trend * 0.2)
+
+        # Calculate volatility and momentum
+        returns = np.diff(prices) / prices[:-1]
+        volatility = np.std(returns)
+        momentum = np.mean(returns[-5:]) if len(returns) >= 5 else 0
+
+        # Volume trend analysis
+        volume_trend = 0
+        if len(volumes) >= 20:
+            recent_vol = np.mean(volumes[-10:])
+            older_vol = np.mean(volumes[-20:-10])
+            volume_trend = (recent_vol - older_vol) / older_vol if older_vol > 0 else 0
+
+        # Technical indicator signals
+        rsi_signal = 0
+        macd_signal = 0
+
+        if 'RSI' in clean_data.columns:
+            latest_rsi = clean_data['RSI'].iloc[-1]
+            if latest_rsi < 30:  # Oversold
+                rsi_signal = 0.02
+            elif latest_rsi > 70:  # Overbought
+                rsi_signal = -0.02
+
+        if 'MACD' in clean_data.columns and 'MACD_Signal' in clean_data.columns:
+            macd_diff = clean_data['MACD'].iloc[-1] - clean_data['MACD_Signal'].iloc[-1]
+            macd_signal = np.tanh(macd_diff / prices[-1]) * 0.01  # Normalize signal
 
         # Generate predictions
         last_price = prices[-1]
         predictions = []
 
+        # Adjust trend based on technical signals
+        adjusted_trend = combined_trend + (momentum * 0.3) + (volume_trend * 0.1) + rsi_signal + macd_signal
+
+        # Add mean reversion component (prices tend to revert to mean over time)
+        price_mean = np.mean(prices)
+        mean_reversion_factor = (price_mean - last_price) / price_mean * 0.001
+
         for i in range(1, days + 1):
-            # Base prediction using trend
-            trend_prediction = last_price + (trend_slope * i)
+            # Base prediction using adjusted trend
+            trend_component = adjusted_trend * i
 
-            # Add some randomness based on volatility
-            noise = np.random.normal(0, volatility * last_price * 0.1)
-            predicted_price = trend_prediction + noise
+            # Add mean reversion (stronger effect over longer periods)
+            reversion_component = mean_reversion_factor * i * 0.5
 
-            # Ensure price doesn't go negative
+            # Add volatility-based uncertainty
+            volatility_factor = volatility * last_price * np.sqrt(i) * 0.1
+            noise = np.random.normal(0, volatility_factor)
+
+            # Combine all components
+            predicted_price = last_price + trend_component + reversion_component + noise
+
+            # Apply realistic constraints
+            max_change = 0.05 * np.sqrt(i)  # Max 5% change per day, scaled by sqrt(days)
+            min_price = last_price * (1 - max_change)
+            max_price = last_price * (1 + max_change)
+
+            predicted_price = np.clip(predicted_price, min_price, max_price)
+
+            # Ensure price doesn't go below 50% of current price
             predicted_price = max(predicted_price, last_price * 0.5)
 
             predictions.append(predicted_price)
 
-        return np.array(predictions)
-    except Exception as e:
-        st.error(f"Error in prediction model: {str(e)}")
-        return np.array([df['Close'].iloc[-1]] * days)
-
-def advanced_prediction_model(df, days=30):
-    """Advanced prediction using machine learning if available"""
-    if not SKLEARN_AVAILABLE:
-        return simple_prediction_model(df, days)
-
-    try:
-        # Prepare features
-        df_ml = calculate_technical_indicators(df.copy())
-
-        # Select features for ML model
-        feature_columns = ['SMA_20', 'SMA_50', 'RSI', 'MACD', 'Volume_Ratio', 'Volatility']
-
-        # Remove NaN values
-        df_ml = df_ml.dropna()
-
-        if len(df_ml) < 50:  # Not enough data for ML
-            return simple_prediction_model(df, days)
-
-        # Prepare training data
-        X = df_ml[feature_columns].values
-        y = df_ml['Close'].values
-
-        # Use last 80% for training
-        train_size = int(len(X) * 0.8)
-        X_train, X_test = X[:train_size], X[train_size:]
-        y_train, y_test = y[:train_size], y[train_size:]
-
-        # Scale features
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-
-        # Train Random Forest model
-        model = RandomForestRegressor(n_estimators=100, random_state=42)
-        model.fit(X_train_scaled, y_train)
-
-        # Generate predictions
-        last_features = X_test_scaled[-1].reshape(1, -1)
-        predictions = []
-
-        for i in range(days):
-            pred = model.predict(last_features)[0]
-            predictions.append(pred)
-
-            # Update features for next prediction (simplified)
-            # In reality, you'd need to recalculate technical indicators
-            last_features = last_features.copy()
-
+        st.success(f"✅ Prediction completed using {len(clean_data)} days of technical analysis")
         return np.array(predictions)
 
     except Exception as e:
-        st.error(f"Error in advanced prediction: {str(e)}")
-        return simple_prediction_model(df, days)
+        st.error(f"❌ Error in prediction model: {str(e)}")
+        # Fallback to very simple prediction
+        last_price = df['Close'].iloc[-1]
+        simple_trend = (df['Close'].iloc[-1] - df['Close'].iloc[-min(30, len(df))]) / min(30, len(df))
+        return np.array([last_price + simple_trend * i for i in range(1, days + 1)])
+
+# Advanced ML model removed - using only Simple Trend Model
 
 def get_investment_recommendation(current_price, predicted_prices, market_sentiment, ticker_info):
     """Generate investment recommendation based on predictions and market data"""
@@ -753,7 +791,7 @@ def plot_stock_prediction(historical_data, predictions, ticker):
         ax.grid(True, alpha=0.3)
 
         # Format y-axis
-        formatter = mticker.FuncFormatter(lambda x, pos: f'${x:.2f}')
+        formatter = mticker.FuncFormatter(lambda x, _: f'${x:.2f}')
         ax.yaxis.set_major_formatter(formatter)
 
         # Rotate x-axis labels
@@ -1055,23 +1093,14 @@ def main():
 
                 # Prediction settings
                 st.markdown("#### ⚙️ Prediction Settings")
-                col1, col2 = st.columns(2)
+                prediction_days = st.slider("Prediction Period (Days)", 7, 60, 30)
 
-                with col1:
-                    prediction_days = st.slider("Prediction Period (Days)", 7, 60, 30)
-
-                with col2:
-                    model_type = st.selectbox("Prediction Model",
-                                            ["Advanced ML Model" if SKLEARN_AVAILABLE else "Simple Trend Model",
-                                             "Simple Trend Model"])
+                st.info("🔮 Using Smart Trend Analysis Model with Technical Indicators")
 
                 # Generate predictions
                 if st.button("🔮 Generate Prediction", type="primary"):
-                    with st.spinner("🤖 Running AI prediction models..."):
-                        if model_type == "Advanced ML Model" and SKLEARN_AVAILABLE:
-                            predictions = advanced_prediction_model(hist_data, prediction_days)
-                        else:
-                            predictions = simple_prediction_model(hist_data, prediction_days)
+                    with st.spinner("🤖 Running prediction analysis..."):
+                        predictions = simple_prediction_model(hist_data, prediction_days)
 
                     # Display prediction results
                     st.markdown("#### 📈 Price Prediction Results")
