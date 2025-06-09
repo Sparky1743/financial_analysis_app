@@ -394,25 +394,25 @@ def analyze_revenue_data(revenue_df, ticker):
         analysis = f"""
 **Revenue Analysis for {ticker}:**
 
-📈 **Latest Revenue:** ${latest_revenue/1e9:.2f}B
-📊 **Year-over-Year Growth:** {growth_rate:.1f}%
+**Latest Revenue:** ${latest_revenue/1e9:.2f}B
+**Year-over-Year Growth:** {growth_rate:.1f}%
 """
 
         if cagr:
-            analysis += f"📈 **Compound Annual Growth Rate (CAGR):** {cagr:.1f}%\n"
+            analysis += f"**Compound Annual Growth Rate (CAGR):** {cagr:.1f}%\n"
 
         # Add trend analysis
         if growth_rate > 10:
-            analysis += "🚀 **Strong Growth:** The company shows robust revenue growth.\n"
+            analysis += "**Strong Growth:** The company shows robust revenue growth.\n"
         elif growth_rate > 0:
-            analysis += "📈 **Positive Growth:** The company is growing steadily.\n"
+            analysis += "**Positive Growth:** The company is growing steadily.\n"
         else:
-            analysis += "📉 **Declining Revenue:** The company faces revenue challenges.\n"
+            analysis += "**Declining Revenue:** The company faces revenue challenges.\n"
 
         # Add revenue range
         min_revenue = revenue_df['revenue'].min()
         max_revenue = revenue_df['revenue'].max()
-        analysis += f"\n💰 **Revenue Range:** ${min_revenue/1e9:.2f}B - ${max_revenue/1e9:.2f}B"
+        analysis += f"\n**Revenue Range:** ${min_revenue/1e9:.2f}B - ${max_revenue/1e9:.2f}B"
 
         return analysis
     except Exception as e:
@@ -441,7 +441,7 @@ def analyze_segment_data(segment_df, ticker):
         dominant_segment = latest_data.loc[latest_data['revenue'].idxmax(), 'segment']
         dominant_percentage = (latest_data['revenue'].max() / total_revenue) * 100
 
-        segment_analysis += f"\n🏆 **Dominant Segment:** {dominant_segment} ({dominant_percentage:.1f}% of total revenue)"
+        segment_analysis += f"\n**Dominant Segment:** {dominant_segment} ({dominant_percentage:.1f}% of total revenue)"
 
         return segment_analysis
     except Exception as e:
@@ -480,7 +480,7 @@ def calculate_technical_indicators(df):
 
         # Ensure we have enough data
         if len(df) < 60:
-            st.warning(f"⚠️ Limited data ({len(df)} days) - some indicators may be less reliable")
+            st.warning(f"Limited data ({len(df)} days) - some indicators may be less reliable")
 
         # Simple Moving Averages
         df['SMA_20'] = df['Close'].rolling(window=min(20, len(df)//3)).mean()
@@ -533,13 +533,13 @@ def calculate_technical_indicators(df):
 
         return df
     except Exception as e:
-        st.error(f"❌ Error calculating technical indicators: {str(e)}")
+        st.error(f"Error calculating technical indicators: {str(e)}")
         return df
 
 def simple_prediction_model(df, days=30):
     """Enhanced prediction model using technical analysis and trend modeling"""
     try:
-        st.info("📊 Analyzing technical indicators and market trends...")
+        st.info("Analyzing technical indicators and market trends...")
 
         # Get extended recent data for better analysis
         recent_data = df.tail(120).copy() if len(df) >= 120 else df.copy()
@@ -551,7 +551,7 @@ def simple_prediction_model(df, days=30):
         clean_data = recent_data.dropna().tail(60) if len(recent_data.dropna()) >= 60 else recent_data.dropna()
 
         if len(clean_data) < 10:
-            st.warning("⚠️ Limited data available, using basic trend analysis")
+            st.warning("Limited data available, using basic trend analysis")
             prices = df['Close'].tail(30).values
             last_price = prices[-1]
             trend = (prices[-1] - prices[0]) / len(prices)
@@ -644,11 +644,11 @@ def simple_prediction_model(df, days=30):
 
             predictions.append(predicted_price)
 
-        st.success(f"✅ Prediction completed using {len(clean_data)} days of technical analysis")
+        st.success(f"Prediction completed using {len(clean_data)} days of technical analysis")
         return np.array(predictions)
 
     except Exception as e:
-        st.error(f"❌ Error in prediction model: {str(e)}")
+        st.error(f"Error in prediction model: {str(e)}")
         # Fallback to very simple prediction
         last_price = df['Close'].iloc[-1]
         simple_trend = (df['Close'].iloc[-1] - df['Close'].iloc[-min(30, len(df))]) / min(30, len(df))
@@ -713,23 +713,23 @@ def get_investment_recommendation(current_price, predicted_prices, market_sentim
 
         # Generate recommendation
         if score >= 6:
-            recommendation = "🟢 STRONG BUY"
+            recommendation = "STRONG BUY"
             confidence = "High"
             reasoning = "Strong upward price prediction, positive market sentiment, and solid fundamentals."
         elif score >= 3:
-            recommendation = "🟢 BUY"
+            recommendation = "BUY"
             confidence = "Medium"
             reasoning = "Positive indicators outweigh negative ones. Good potential for growth."
         elif score >= 0:
-            recommendation = "🟡 HOLD"
+            recommendation = "HOLD"
             confidence = "Medium"
             reasoning = "Mixed signals. Consider holding current position or wait for clearer trends."
         elif score >= -3:
-            recommendation = "🔴 SELL"
+            recommendation = "SELL"
             confidence = "Medium"
             reasoning = "Negative indicators suggest potential downside. Consider reducing position."
         else:
-            recommendation = "🔴 STRONG SELL"
+            recommendation = "STRONG SELL"
             confidence = "High"
             reasoning = "Multiple negative indicators suggest significant downside risk."
 
@@ -744,7 +744,7 @@ def get_investment_recommendation(current_price, predicted_prices, market_sentim
 
     except Exception as e:
         return {
-            'recommendation': "🟡 HOLD",
+            'recommendation': "HOLD",
             'confidence': "Low",
             'reasoning': f"Unable to generate recommendation due to data issues: {str(e)}",
             'predicted_change': 0,
@@ -881,11 +881,11 @@ def plot_interactive_prediction(historical_data, predictions, ticker):
 
 
 # Streamlit app Initialisation
-st.title("📊 Enhanced Financial Analysis App")
+st.title("Enhanced Financial Analysis App")
 st.markdown("### Analyze financial data for major public companies")
 
 # Sidebar with supported companies
-st.sidebar.title("🏢 Supported Companies")
+st.sidebar.title("Supported Companies")
 st.sidebar.markdown("Select from popular tickers or enter your own:")
 
 # Create columns for better layout
@@ -929,8 +929,8 @@ def main():
         financial_data = get_company_financial_data(company)
 
         if not financial_data['success']:
-            st.error(f"❌ Could not fetch data for {company}. Please check the ticker symbol.")
-            st.info("💡 Try one of the supported companies from the sidebar.")
+            st.error(f"Could not fetch data for {company}. Please check the ticker symbol.")
+            st.info("Try one of the supported companies from the sidebar.")
             return
 
         progress_bar.progress(50)
@@ -947,7 +947,7 @@ def main():
         regional_df, regional_pivot = create_regional_data(revenue_df, company)
 
         progress_bar.progress(100)
-        status_text.text("✅ Data loaded successfully!")
+        status_text.text("Data loaded successfully!")
 
         # Clear progress indicators
         progress_bar.empty()
@@ -957,16 +957,16 @@ def main():
         option = st.selectbox(
             "Choose an analysis option:",
             (
-                "📋 Company Overview",
-                "📊 Revenue Trend Analysis",
-                "🏭 Product-Based Revenue Insights",
-                "🌍 Region-Based Revenue Insights",
-                "🔮 Stock Price Prediction & Investment Advice",
+                "Company Overview",
+                "Revenue Trend Analysis",
+                "Product-Based Revenue Insights",
+                "Region-Based Revenue Insights",
+                "Stock Price Prediction & Investment Advice",
             ),
         )
 
         ## OPTION 1: Company Overview
-        if option == "📋 Company Overview":
+        if option == "Company Overview":
             st.markdown("### Company Overview")
             summary = get_company_summary(company, financial_data)
             st.markdown(summary)
@@ -986,7 +986,7 @@ def main():
                     st.metric("Profit Margin", f"{info.get('profitMargins', 0):.1%}")
 
         ## OPTION 2: Revenue Trend Analysis
-        elif option == "📊 Revenue Trend Analysis":
+        elif option == "Revenue Trend Analysis":
             st.markdown("### Revenue Trend Analysis")
 
             if revenue_df is not None and not revenue_df.empty:
@@ -1008,7 +1008,7 @@ def main():
                 st.warning("No revenue data available for this company.")
 
         ## OPTION 3: Product wise Revenue Insights
-        elif option == "🏭 Product-Based Revenue Insights":
+        elif option == "Product-Based Revenue Insights":
             st.markdown("### Product-Based Revenue Analysis")
 
             if segment_pivot is not None and not segment_pivot.empty:
@@ -1024,7 +1024,7 @@ def main():
                 st.markdown(analysis)
 
                 # Show segment data
-                with st.expander("📊 View Detailed Segment Data"):
+                with st.expander("View Detailed Segment Data"):
                     display_df = segment_df.copy()
                     display_df['revenue'] = display_df['revenue'].apply(lambda x: f"${x/1e9:.2f}B")
                     st.dataframe(display_df, use_container_width=True)
@@ -1032,7 +1032,7 @@ def main():
                 st.warning("No segment data available for visualization.")
 
         ## OPTION 4: Region-Based Revenue Insights
-        elif option == "🌍 Region-Based Revenue Insights":
+        elif option == "Region-Based Revenue Insights":
             st.markdown("### Geographic Revenue Analysis")
 
             if regional_pivot is not None and not regional_pivot.empty:
@@ -1048,7 +1048,7 @@ def main():
                 st.markdown(analysis.replace('Segment', 'Regional'))
 
                 # Show regional data
-                with st.expander("🌍 View Detailed Regional Data"):
+                with st.expander("View Detailed Regional Data"):
                     display_df = regional_df.copy()
                     display_df['revenue'] = display_df['revenue'].apply(lambda x: f"${x/1e9:.2f}B")
                     st.dataframe(display_df, use_container_width=True)
@@ -1056,8 +1056,8 @@ def main():
                 st.warning("No regional data available for visualization.")
 
         ## OPTION 5: Stock Price Prediction & Investment Advice
-        elif option == "🔮 Stock Price Prediction & Investment Advice":
-            st.markdown("### 🔮 AI-Powered Stock Prediction & Investment Analysis")
+        elif option == "Stock Price Prediction & Investment Advice":
+            st.markdown("### AI-Powered Stock Prediction & Investment Analysis")
 
             # Get extended historical data for prediction
             try:
@@ -1065,45 +1065,44 @@ def main():
                 hist_data = stock.history(period="2y")  # 2 years of data for better prediction
 
                 if hist_data.empty:
-                    st.error("❌ Unable to fetch historical data for prediction.")
+                    st.error("Unable to fetch historical data for prediction.")
                     return
 
                 # Get current market sentiment
-                with st.spinner("🌐 Analyzing market sentiment and geopolitical factors..."):
+                with st.spinner("Analyzing market sentiment and geopolitical factors..."):
                     market_sentiment = get_market_sentiment_data()
 
                 # Display current market conditions
-                st.markdown("#### 🌍 Current Market Conditions")
+                st.markdown("#### Current Market Conditions")
                 col1, col2, col3 = st.columns(3)
 
                 with col1:
-                    vix_color = "🔴" if market_sentiment['vix'] > 30 else "🟡" if market_sentiment['vix'] > 20 else "🟢"
                     st.metric("VIX (Fear Index)", f"{market_sentiment['vix']:.1f}",
                              help="VIX measures market volatility. <20: Low fear, 20-30: Moderate, >30: High fear")
-                    st.markdown(f"{vix_color} {'High Fear' if market_sentiment['vix'] > 30 else 'Moderate Fear' if market_sentiment['vix'] > 20 else 'Low Fear'}")
+                    fear_level = 'High Fear' if market_sentiment['vix'] > 30 else 'Moderate Fear' if market_sentiment['vix'] > 20 else 'Low Fear'
+                    st.markdown(f"**{fear_level}**")
 
                 with col2:
-                    trend_color = "🟢" if market_sentiment['market_trend'] > 0 else "🔴"
                     st.metric("S&P 500 Trend (3M)", f"{market_sentiment['market_trend']:.1f}%")
-                    st.markdown(f"{trend_color} {market_sentiment['sentiment']} Market")
+                    st.markdown(f"**{market_sentiment['sentiment']} Market**")
 
                 with col3:
                     current_price = hist_data['Close'].iloc[-1]
                     st.metric("Current Price", f"${current_price:.2f}")
 
                 # Prediction settings
-                st.markdown("#### ⚙️ Prediction Settings")
+                st.markdown("#### Prediction Settings")
                 prediction_days = st.slider("Prediction Period (Days)", 7, 60, 30)
 
-                st.info("🔮 Using Smart Trend Analysis Model with Technical Indicators")
+                st.info("Using Smart Trend Analysis Model with Technical Indicators")
 
                 # Generate predictions
-                if st.button("🔮 Generate Prediction", type="primary"):
-                    with st.spinner("🤖 Running prediction analysis..."):
+                if st.button("Generate Prediction", type="primary"):
+                    with st.spinner("Running prediction analysis..."):
                         predictions = simple_prediction_model(hist_data, prediction_days)
 
                     # Display prediction results
-                    st.markdown("#### 📈 Price Prediction Results")
+                    st.markdown("#### Price Prediction Results")
 
                     # Create prediction plot
                     if PLOTLY_AVAILABLE:
@@ -1135,22 +1134,23 @@ def main():
                         st.metric("Predicted Low", f"${min_price:.2f}")
 
                     # Investment recommendation
-                    st.markdown("#### 💡 AI Investment Recommendation")
+                    st.markdown("#### AI Investment Recommendation")
 
                     recommendation = get_investment_recommendation(
                         current_price, predictions, market_sentiment, financial_data['info']
                     )
 
                     # Display recommendation in a prominent box
+                    recommendation_text = recommendation['recommendation'].replace('🟢', '').replace('🔴', '').replace('🟡', '').strip()
                     st.markdown(f"""
                     <div style="
                         padding: 20px;
                         border-radius: 10px;
                         background: linear-gradient(90deg, #f0f2f6, #ffffff);
-                        border-left: 5px solid {'#00ff00' if 'BUY' in recommendation['recommendation'] else '#ff0000' if 'SELL' in recommendation['recommendation'] else '#ffaa00'};
+                        border-left: 5px solid {'#00ff00' if 'BUY' in recommendation_text else '#ff0000' if 'SELL' in recommendation_text else '#ffaa00'};
                         margin: 20px 0;
                     ">
-                        <h3 style="margin: 0; color: #333;">{recommendation['recommendation']}</h3>
+                        <h3 style="margin: 0; color: #333;">{recommendation_text}</h3>
                         <p style="margin: 10px 0; font-size: 16px;"><strong>Confidence:</strong> {recommendation['confidence']}</p>
                         <p style="margin: 10px 0; font-size: 14px;">{recommendation['reasoning']}</p>
                         <p style="margin: 10px 0; font-size: 14px;"><strong>Target Price:</strong> ${recommendation['target_price']:.2f}</p>
@@ -1158,14 +1158,14 @@ def main():
                     """, unsafe_allow_html=True)
 
                     # Risk factors and considerations
-                    st.markdown("#### ⚠️ Risk Factors & Considerations")
+                    st.markdown("#### Risk Factors & Considerations")
 
                     risk_factors = [
-                        "📊 **Market Volatility**: Stock predictions are inherently uncertain and subject to market volatility.",
-                        "🌍 **Geopolitical Events**: Unexpected global events can significantly impact stock prices.",
-                        "📰 **Company News**: Earnings reports, product launches, or management changes can affect prices.",
-                        "💹 **Economic Indicators**: Interest rates, inflation, and economic data influence market movements.",
-                        "🔄 **Model Limitations**: Predictions are based on historical data and may not capture future market dynamics."
+                        "**Market Volatility**: Stock predictions are inherently uncertain and subject to market volatility.",
+                        "**Geopolitical Events**: Unexpected global events can significantly impact stock prices.",
+                        "**Company News**: Earnings reports, product launches, or management changes can affect prices.",
+                        "**Economic Indicators**: Interest rates, inflation, and economic data influence market movements.",
+                        "**Model Limitations**: Predictions are based on historical data and may not capture future market dynamics."
                     ]
 
                     for factor in risk_factors:
@@ -1174,19 +1174,19 @@ def main():
                     # Disclaimer
                     st.markdown("""
                     ---
-                    **⚠️ IMPORTANT DISCLAIMER**: This prediction is for educational purposes only and should not be considered as financial advice.
+                    **IMPORTANT DISCLAIMER**: This prediction is for educational purposes only and should not be considered as financial advice.
                     Always consult with a qualified financial advisor before making investment decisions. Past performance does not guarantee future results.
                     """)
 
             except Exception as e:
-                st.error(f"❌ Error in prediction analysis: {str(e)}")
-                st.info("💡 Try selecting a different company or check your internet connection.")
+                st.error(f"Error in prediction analysis: {str(e)}")
+                st.info("Try selecting a different company or check your internet connection.")
 
     # Footer
     st.markdown("---")
     st.markdown(
         '<div style="text-align: center; color: #666; font-size: 14px;">'
-        '📊 Enhanced Financial Analysis App | '
+        'Enhanced Financial Analysis App | '
         'Data powered by Yahoo Finance | '
         'Built with Streamlit'
         '</div>',
