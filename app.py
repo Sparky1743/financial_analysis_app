@@ -171,7 +171,6 @@ def get_all_revenues(json_data):
     all_revenues["value"] = pd.to_numeric(all_revenues["value"], errors="coerce")
     all_revenues = all_revenues.dropna(subset=["value"])
 
-
     try:
         all_revenues = all_revenues.explode("segment")
         segment_split = all_revenues["segment"].apply(pd.Series)
