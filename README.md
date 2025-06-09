@@ -1,36 +1,178 @@
 # Financial Analysis App
+
 ## Overview
-The Financial Analysis App is a web application built to analyze financial data of companies retrieved from the SEC EDGAR database using ```sec-api```. It provides functionalities to fetch, analyze, and visualize financial statements, enabling users to gain insights into a company's performance over time.
+The Financial Analysis App is a comprehensive web application built to analyze financial data of publicly traded companies using real-time data from Yahoo Finance. It provides advanced functionalities to fetch, analyze, and visualize financial statements, market trends, and stock predictions, enabling users to gain deep insights into company performance and make informed investment decisions.
 
 ## Features
-1. **Company Overview:** This option provides a concise summary of the company based on its ticker name. It includes details such as founding information, headquarters location, key products, revenue sources, competitors, market capitalization, CEO, focus areas, and future plans.
-- This overview is beneficial for users who want a quick understanding of the company's background and current position in the market.
-  
-2. **Product-Based Revenue Insights:** This feature analyzes the company's revenue breakdown by product categories over time. By visualizing revenue trends and distributions across different product lines, users can gain insights into the performance of individual products and identify which ones contribute most significantly to the company's overall revenue.
-- This information is valuable for strategic decision-making, product planning, and assessing market demand.
 
-3. **Region-Based Revenue Insights:** This option examines the company's revenue distribution across geographical regions or markets. By visualizing revenue trends by region, users can assess the company's global presence, identify growth opportunities in specific regions, and evaluate the impact of regional factors on revenue performance.
-- Understanding regional revenue dynamics can help businesses optimize their market expansion strategies, allocate resources effectively, and mitigate geographical risks.
+### 1. Company Overview
+Get a comprehensive summary of any publicly traded company including:
+- **Financial Highlights:** Market cap, enterprise value, revenue (TTM), profit margins
+- **Key Metrics:** P/E ratio, price-to-book ratio, debt-to-equity, return on equity
+- **Company Information:** Sector, industry, country, website, employee count
+- **Business Description:** Detailed business summary and operations overview
+
+### 2. Revenue Trend Analysis
+Analyze historical revenue performance with:
+- **Interactive Revenue Charts:** Visual representation of revenue trends over time
+- **Growth Metrics:** Year-over-year growth rates and compound annual growth rate (CAGR)
+- **Performance Insights:** Automated analysis of revenue patterns and growth trajectory
+- **Data Tables:** Detailed revenue data with formatted financial figures
+
+### 3. Product-Based Revenue Insights
+Explore revenue breakdown by business segments:
+- **Segment Analysis:** Revenue distribution across different product categories
+- **Visual Charts:** Stacked bar charts showing segment performance over time
+- **Dominant Segments:** Identification of key revenue drivers
+- **Strategic Insights:** Understanding of business diversification and focus areas
+
+### 4. Region-Based Revenue Insights
+Understand geographical revenue distribution:
+- **Regional Analysis:** Revenue breakdown by geographic markets
+- **Global Presence:** Assessment of international vs domestic revenue
+- **Market Expansion:** Insights into regional growth opportunities
+- **Risk Assessment:** Geographic diversification analysis
+
+### 5. Stock Price Prediction & Investment Advice
+Advanced AI-powered stock analysis featuring:
+- **Technical Analysis:** RSI, MACD, Bollinger Bands, moving averages
+- **Market Sentiment:** VIX analysis and S&P 500 trend indicators
+- **Price Predictions:** 7-60 day stock price forecasts using advanced algorithms
+- **Investment Recommendations:** AI-generated buy/sell/hold recommendations
+- **Risk Assessment:** Comprehensive risk factors and market considerations
+- **Interactive Charts:** Plotly-powered interactive visualizations with confidence bands
 ## How to Run the Application
-Access the application in your web browser at https://financial-analysis-app-dkshjn.streamlit.app/
 
-**OR**
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd financial_analysis_app
+   ```
 
-1. Install the required Python dependencies listed in requirements.txt using pip install -r requirements.txt.
-2. Run the Streamlit application by executing streamlit run app.py in the terminal.
-3. Access the application in your web browser at http://localhost:8501.
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Check out the app demo video [here](https://drive.google.com/file/d/16YK9DCXpC6NrzuN_YA2jI8jj39HhrTO8/view?usp=sharing).
-## Tech Stack
-- **Python:** Used as the primary programming language for backend development due to its simplicity, extensive libraries, and ecosystem support for financial analysis tasks.
-- **Streamlit:** Used for building the web application's user interface due to its ease of use, rapid prototyping capabilities, and ability to turn data scripts into interactive web apps.
+3. **Run the application:**
+   ```bash
+   streamlit run app.py
+   ```
 
+4. **Access the app:**
+   Open your web browser and navigate to `http://localhost:8501`
+
+
+##  Supported Companies
+The application supports analysis for 80+ major publicly traded companies across various sectors:
+
+**Technology:** AAPL, GOOGL, MSFT, AMZN, META, NVDA, NFLX, ADBE, CRM, ORCL, IBM, INTC, AMD, and more
+
+**Finance:** JPM, BAC, WFC, GS, MS, V, MA
+
+**Consumer:** WMT, TGT, HD, LOW, SBUX, MCD, NKE, DIS
+
+**Healthcare:** JNJ, PFE, UNH, CVS
+
+**Energy:** XOM, CVX, COP
+
+**And many more!** You can also analyze any publicly traded company by entering its ticker symbol.
+
+##  Tech Stack
+
+### Core Technologies
+- **Python 3.8+:** Primary programming language chosen for its robust ecosystem of financial and data analysis libraries
+- **Streamlit:** Modern web framework for building interactive data applications with minimal code
+- **Yahoo Finance API:** Real-time financial data source providing comprehensive market information
+
+### Data Processing & Analysis
+- **Pandas:** Advanced data manipulation and analysis library for handling financial datasets
+- **NumPy:** Numerical computing library for mathematical operations and array processing
+- **yfinance:** Python library for accessing Yahoo Finance data programmatically
+
+### Visualization & UI
+- **Matplotlib:** Comprehensive plotting library for creating static, publication-quality charts
+- **Plotly:** Interactive visualization library for dynamic, web-based charts and graphs
+- **Streamlit Components:** UI elements for better user experience
+
+### Financial Analysis Features
+- **Technical Indicators:** RSI, MACD, Bollinger Bands, Moving Averages
+- **Market Sentiment Analysis:** VIX tracking and market trend analysis
+- **Predictive Modeling:** Custom algorithms for stock price forecasting
+- **Risk Assessment:** Comprehensive investment recommendation system
 
 ## Dependencies
-- **sec-api:** The ```sec-api``` package is a Python library that provides access to the U.S. Securities and Exchange Commission (SEC) Electronic Data Gathering, Analysis, and Retrieval (EDGAR) database. It allows users to programmatically query and retrieve various types of financial data, including filings, reports, and disclosures submitted by publicly traded companies. For more details visit [sec-api](https://sec-api.io/).
-- **Pandas:** Leveraged for data manipulation and analysis tasks, as it provides powerful data structures and functions to work with structured data, making it suitable for handling financial datasets.
-- **Matplotlib:** Employed for data visualization purposes, as it is a widely-used plotting library in Python that offers flexibility and customization options for creating various types of charts and graphs.
-- **DSPy:** DSPy is a Python library that facilitates interaction various LLMs. It offers a streamlined interface for accessing and utilizing these powerful language models for various natural language processing tasks. For more details, checkout the [DSPy github repository](https://github.com/stanfordnlp/dspy).
-- **Ollama**: The LLM (Large Language Model) utilized in the Financial Analysis App is Llama2, a variant of Ollama, implemented through DSPy. Llama2 is an instance of Ollama, a model designed for generating human-like text based on input prompts. For more details on the LLM model Llama2, please visit the [Ollama website](https://ollama.com/library/llama2).
+
+### Core Dependencies
+```
+streamlit==1.34.0    # Web application framework
+pandas               # Data manipulation and analysis
+numpy                # Numerical computing
+yfinance             # Yahoo Finance data access
+matplotlib==3.8.2    # Static plotting and visualization
+plotly               # Interactive charts and graphs
+requests             # HTTP library for API calls
+```
+
+### Key Libraries Explained
+- **yfinance:** Provides access to Yahoo Finance's comprehensive financial data including stock prices, financial statements, company information, and market indices
+- **Pandas:** Essential for data manipulation, cleaning, and analysis of financial datasets with powerful DataFrame operations
+- **Matplotlib:** Creates professional-quality static charts for revenue analysis, trend visualization, and financial reporting
+- **Plotly:** Enables interactive visualizations with zoom, pan, and hover capabilities for user experience
+- **Streamlit:** Transforms Python scripts into interactive web applications with minimal configuration
+- **NumPy:** Supports mathematical operations required for financial calculations, technical indicators, and predictive modeling
+
+## Installation Requirements
+- Python 3.8 or higher
+- Internet connection for real-time data fetching
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Minimum 4GB RAM recommended for optimal performance
+
+## Key Features in Detail
+
+### Real-Time Data Integration
+- **Live Market Data:** Real-time stock prices, market indices, and financial metrics
+- **Historical Analysis:** Up to 5 years of historical financial data for trend analysis
+- **Market Sentiment:** VIX fear index and S&P 500 trend indicators for market context
+
+### Advanced Analytics
+- **Technical Analysis:**
+  - RSI (Relative Strength Index) for momentum analysis
+  - MACD (Moving Average Convergence Divergence) for trend identification
+  - Bollinger Bands for volatility assessment
+  - Multiple moving averages (SMA, EMA) for trend analysis
+
+- **Predictive Modeling:**
+  - Custom algorithms combining multiple technical indicators
+  - Market sentiment integration for predictions
+  - Confidence bands and risk assessment
+  - 7-60 day forecasting capabilities
+
+### Investment Intelligence
+- **Automated Recommendations:** AI-powered buy/sell/hold suggestions
+- **Risk Assessment:** Comprehensive analysis of investment risks
+- **Performance Metrics:** ROI calculations, growth rates, and financial ratios
+- **Market Context:** Integration of broader market conditions in analysis
+
+## How to Use
+
+1. **Select a Company:** Enter a ticker symbol or choose from the sidebar of popular companies
+2. **Choose Analysis Type:** Select from 5 different analysis options
+3. **View Results:** Interactive charts, detailed metrics, and actionable insights
+4. **Export Data:** Download charts and data for further analysis
+5. **Make Informed Decisions:** Use AI recommendations and risk assessments
+
+## Data Sources & Reliability
+- **Primary Source:** Yahoo Finance API for real-time and historical data
+- **Market Indices:** S&P 500, VIX, and other major market indicators
+- **Update Frequency:** Real-time for current prices, daily for historical data
+- **Data Validation:** Built-in error handling and data quality checks
+
+## Disclaimer
+This application is designed for educational and informational purposes only. The stock predictions and investment recommendations provided should not be considered as financial advice. Always consult with qualified financial advisors before making investment decisions. Past performance does not guarantee future results, and all investments carry inherent risks.
+
+## Contributing
+Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests to help improve the application.
+
 
 
