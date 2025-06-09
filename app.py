@@ -168,7 +168,9 @@ def get_all_revenues(json_data):
     except Exception:
         pass
 
-    all_revenues["value"] = all_revenues["value"].astype(int)
+    all_revenues["value"] = pd.to_numeric(all_revenues["value"], errors="coerce")
+    all_revenues = all_revenues.dropna(subset=["value"])
+
 
     try:
         all_revenues = all_revenues.explode("segment")
